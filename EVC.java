@@ -42,15 +42,16 @@ public class EVC {
                 System.out.print("Enter the event Name: ");
                 String name = scanner.nextLine();
 
-                System.out.print("Enter the date: ");
+                System.out.print("Enter the date(mm-dd-yy): ");
                 String date = scanner.nextLine(); 
 
-                System.out.print("Enter the time: ");
+                System.out.print("Enter the time(hh:mm:ss): ");
                 String description = scanner.nextLine();
 
                 System.out.print("Enter the task description: ");
                 String time = scanner.nextLine();
 
+//                StringBuilder dateTime = new StringBuilder(date+ " "+ time);
 
 
 
