@@ -1,6 +1,6 @@
 # README file for Event Management System
 
-## Authors: [Jesse Adjetey, Martha Agyemang, Chelsea Owusu, Dela Nuworkpor]
+## Authors: Jesse Adjetey, Martha Agyemang, Chelsea Owusu, Dela Nuworkpor
 
 1. Introduction:
    This project is an Event Management System employing hash tables, array lists, and priority queues. It features a text-based interactive interface with numbered options that enable users to create, modify, delete, view daily or monthly schedules, and display reminders for pending events. The system is designed for the year 2023, managing events within that specific timeframe.
