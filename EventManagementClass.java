@@ -40,7 +40,11 @@ public class EventManagementClass {
                 listOfEvents.add(event);
             }
         }
-        return listOfEvents;
+        return listOfEvents;}
+
+    public String reminder(Event name, String dateOfEvent,String time){
+        return
+    }
 
 
 
