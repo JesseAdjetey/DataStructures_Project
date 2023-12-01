@@ -1,26 +1,30 @@
-import java.time.DayOfWeek;
-import java.time.Month;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.PriorityQueue;
+import java.util.Scanner;
 import java.time.LocalDateTime;
 
 public class EventManagement {
 
     private int numberOfEvents = 0;
+    // Priority Queue to store the events
     PriorityQueue<Event> events;
-
-    private Stack<Event> eventsInADay;
-    Map<Month, Map<Integer, Stack<Event>>> monthlyHashtable = new HashMap<>();
     private Scanner scanner;
-
+/**
+ * Event management constructor
+ */
     public EventManagement(){
          events = new PriorityQueue<>();
          this.scanner = new Scanner(System.in);
     }
 
 
-
+/**
+ * addEvent method.
+ * @param event
+ * @return
+ */
     public String addEvent(Event event) {
-        // Check if the event already exists in the queue
+        // Checks if the event already exists in the queue
         for (Event existingEvent : events) {
             if (existingEvent.equals(event)) {
                 return "Event already exists";
@@ -47,102 +51,109 @@ public class EventManagement {
     
         // Add the event to the queue if not already present
         events.add(event);
-        Month month = event.getDateTime().getMonth();
-        monthlyHashtable.putIfAbsent(month, new HashMap<>());
-        // Get the hashtable for the month
-        Map<Integer, Stack<Event>> dayHashtable = monthlyHashtable.get(month);
-        // If the day is not in the hashtable, create a new stack for the day
-        dayHashtable.putIfAbsent(event.getDateTime().getDayOfMonth(), new Stack<>());
-        // Get the stack for the day and add the event
-        Integer day= event.getDateTime().getDayOfMonth();
-        Stack<Event> eventStack = dayHashtable.get(day);
-        eventStack.push(event);
+        numberOfEvents++;
         return "Event added";
     }
 
-    public String deleteEvent(Event eventToDelete) {
-        // Remove the event from the priority queue
-        boolean removedFromQueue = events.remove(eventToDelete);
-
-        // Remove the event from the monthlyHashtable
-        if (monthlyHashtable.containsKey(eventToDelete.getDateTime().getMonth())) {
-            Map<Integer, Stack<Event>> dayHashtable = monthlyHashtable.get(eventToDelete.getDateTime().getMonth());
-            if (dayHashtable.containsKey(eventToDelete.getDateTime().getDayOfMonth())) {
-                Stack<Event> eventStack = dayHashtable.get(eventToDelete.getDateTime().getDayOfMonth());
-
-                // Remove the event from the stack
-                eventStack.removeIf(e -> e.equals(eventToDelete));
-
-                // If the stack is now empty, remove the day entry from the dayHashtable
-                if (eventStack.isEmpty()) {
-                    dayHashtable.remove(eventToDelete.getDateTime().getDayOfMonth());
-                }
-
-                // If the dayHashtable is now empty, remove the month entry from the monthlyHashtable
-                if (dayHashtable.isEmpty()) {
-                    monthlyHashtable.remove(eventToDelete.getDateTime().getMonth());
-                }
-
-                if (removedFromQueue) {
-                    return "Event deleted";
-                } else {
-                    return "Event not found in the priority queue";
-                }
-            }
-        }
-
-        return "Event not found in the monthlyHashtable";
-    }
-
-
+/**
+ * updateEventInQueue method
+ * method used to remove and add events after performing rescheduling
+ * @param event
+ */
     private void updateEventInQueue(Event event) {
         events.remove(event); // Remove the event from the queue
         events.add(event);    // Re-add the event so it's placed correctly in the queue
     }
 
-    public Event searchEvent(String name, LocalDateTime dateTime) {
+/**
+ * 
+ * @param newEvent
+ * @return
+ */
+    public ArrayList<Event> searchEvent(String newEvent) {
+        ArrayList<Event> listOfEvents = new ArrayList<>();
+        if(events!=null){
+        int ind = 1;
         for (Event event : events) {
-            if (event.getEventName().equals(name) && event.getDateTime().isEqual(dateTime)) {
-                return event;
+            if (newEvent.equals(event.getEventName())) {
+                listOfEvents.add(event);
+                System.out.println(ind + newEvent);
+                ind++;
             }
-        }
-        return null; // Event not found
-    }
-
+            System.out.println("These are all the events with the name:"+ newEvent+"\nPlease select the event you wish to find by typing the number infront of it:");
+            int search_select = scanner.nextInt();
+            System.out.println(listOfEvents.get(search_select-1));
+            
+        }}
+        scanner.nextLine();
+        return listOfEvents;}
+    // public ArrayList<Event> searchEvent(String name,String dateOfEvent,String description,String time) {
+    //     Event other = new Event(name,dateOfEvent,time,description);
+    //     ArrayList<Event> listOfEvents = new ArrayList<>();
+    //     for (Event event : events) {
+    //         if (event.toString().compareTo(other.toString())==0){
+    //             listOfEvents.add(event);
+    //         }
+    //     }
+    //     return listOfEvents;}
+/**
+ * reminder method
+ * @return
+ */
     public String reminder() {
-        Event nextEvent = events.peek(); // This removes the event from the queue
+        // This removes the event from the queue
+        Event nextEvent = events.poll(); 
         if (nextEvent != null) {
+         // Assuming Event has a properly overridden toString method
             return nextEvent.toString();
         }
-        return "No events.";
+        return "No more events.";
     }
-
+/**
+ * isConflict method
+ * Checks to see if any events happen at the same time
+ * @param newEvent
+ * @return boolean
+ */
     private boolean isConflict(Event newEvent) {
         for (Event existingEvent : events) {
             if (newEvent.getDateTime().isEqual(existingEvent.getDateTime())) {
-                return true; // Direct clash in timing
+                return true; 
             }
-            // Add additional checks if needed, based on your event scheduling logic
         }
        return false;
     }
-
+/**
+ * tryRescheduleEvent method.
+ * Tries to reschedule the event by adding an hour consecutively until reaching a spot that is free
+ * @param event
+ * @return boolean
+ */
     private boolean tryRescheduleEvent(Event event) {
         LocalDateTime originalDateTime = event.getDateTime();
         for (int i = 1; i <= 3; i++) {
+            // Hourly increment
             LocalDateTime newDateTime = originalDateTime.plusHours(i);
             if (!isDateTimeTaken(newDateTime, event)) {
-                deleteEvent(event); // Remove event before updating its DateTime
+                // Remove event before updating its DateTime
+                events.remove(event); 
                 event.setDateTime(newDateTime);
-                addEvent(event);    // Re-add event to update its position in PriorityQueue
+                events.add(event);   
                 return true;
             }
         }
         return false;
     }
 
+    
 
-
+/**
+ * isDateTimeTaken method
+ * returns a boolean to know whether the time that an event is assigned to during rescheduling is taken or not
+ * @param dateTime
+ * @param eventToExclude
+ * @return boolean
+ */
     private boolean isDateTimeTaken(LocalDateTime dateTime, Event eventToExclude) {
         for (Event event : events) {
             if (!event.equals(eventToExclude) && event.getDateTime().isEqual(dateTime)) {
@@ -151,24 +162,39 @@ public class EventManagement {
         }
        return false;
     }
-
+/**
+ * forceRescheduleEvent method
+ * Works similarly to the tryRescheduleEvent
+ * Whereas tryRescheduleEvent increments hourly for a few times (3) forceReschedule increments hourly until a time is found to be inputted
+ * Therefore tryReschedule tries to make sure the rescheduling is as recent and close to the time you wanted to have that event whereas forceReschedule event
+ * just makes sure that it slots in an event regardless of how far it was from your previous event time
+ * @param event
+ */
     private void forceRescheduleEvent(Event event) {
         LocalDateTime newDateTime = event.getDateTime();
         boolean rescheduled = false;
         while (!rescheduled) {
             newDateTime = newDateTime.plusHours(1);
-            if (!isDateTimeTaken(newDateTime, event) || canMoveEventAtDateTime(newDateTime)) {
-                deleteEvent(event); // Remove event before updating its DateTime
+            //Checks if the new incremented newDateTime is not taken by any other event (!isDateTimeTaken) or if the event can be moved at that time
+            if (!isDateTimeTaken(newDateTime, event) || canMoveEventAtDateTime(newDateTime, event)) {
+                events.remove(event); // Remove event before updating its DateTime
                 event.setDateTime(newDateTime);
-                addEvent(event);    // Re-add event to update its position in PriorityQueue
+                events.add(event);    // Re-add event to update its position in PriorityQueue
                 rescheduled = true;
             }
         }
     }
-    
+/**
+ * canMoveEventAtDateTime method
+ * 
+ * @param dateTime
+ * @return boolean
+ */
     private boolean canMoveEventAtDateTime(LocalDateTime dateTime) {
         for (Event event : events) {
+            // check if an event with a particular date and time (dateTime) and a lower priority (0) can be moved to another time 
             if (event.getDateTime().isEqual(dateTime) && event.getPriority() == 0) {
+                // If event is found, it attempts to move it by adding one hour to its tim
                 LocalDateTime newDateTimeForExistingEvent = dateTime.plusHours(1);
                 event.setDateTime(newDateTimeForExistingEvent);
                 return true;
@@ -177,48 +203,7 @@ public class EventManagement {
        return false;
     }
 
-    public void monthlyView(Month month) {
-            if (monthlyHashtable.containsKey(month)) {
-                Map<Integer, Stack<Event>> dayHashtable = monthlyHashtable.get(month);
-
-                System.out.println("All events for " + month + ":");
-
-                // Iterate through days in the month
-                for (Map.Entry<Integer, Stack<Event>> entry : dayHashtable.entrySet()) {
-                    int day = entry.getKey();
-                    Stack<Event> eventStack = entry.getValue();
-                    System.out.println("Day " + day + ":");
-
-                    // Print all events for the day
-                    while (!eventStack.isEmpty()) {
-                        System.out.println(eventStack.pop());
-                    }
-                }
-            } else {
-                System.out.println("No events for " + month);
-            }
-    }
-    public void dailyView(Month month,int day){
-            if (monthlyHashtable.containsKey(month)) {
-                Map<Integer, Stack<Event>> dayHashtable = monthlyHashtable.get(month);
-                if(dayHashtable.containsKey(day)){
-                // Iterate through events in the day
-                Stack<Event> eventStack= dayHashtable.get(day);
-                System.out.println("Events of the Day " + day + ":");
-                // Print all events for the day
-                while (!eventStack.isEmpty()) {
-                    System.out.println(eventStack.pop());
-                }
-
-            } else {
-                System.out.println("No events for " + day);
-            }
-        }
-
-    }
 
 
 
 }
-
-
