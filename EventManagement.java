@@ -1,12 +1,15 @@
-import java.util.ArrayList;
-import java.util.PriorityQueue;
-import java.util.Scanner;
+import java.time.DayOfWeek;
+import java.time.Month;
+import java.util.*;
 import java.time.LocalDateTime;
 
 public class EventManagement {
 
     private int numberOfEvents = 0;
     PriorityQueue<Event> events;
+
+    private Stack<Event> eventsInADay;
+    Map<Month, Map<Integer, Stack<Event>>> monthlyHashtable = new HashMap<>();
     private Scanner scanner;
 
     public EventManagement(){
@@ -44,8 +47,51 @@ public class EventManagement {
     
         // Add the event to the queue if not already present
         events.add(event);
-        numberOfEvents++;
+        Month month = event.getDateTime().getMonth();
+        monthlyHashtable.putIfAbsent(month, new HashMap<>());
+        // Get the hashtable for the month
+        Map<Integer, Stack<Event>> dayHashtable = monthlyHashtable.get(month);
+        // If the day is not in the hashtable, create a new stack for the day
+        dayHashtable.putIfAbsent(event.getDateTime().getDayOfMonth(), new Stack<>());
+        // Get the stack for the day and add the event
+        Integer day= event.getDateTime().getDayOfMonth();
+        Stack<Event> eventStack = dayHashtable.get(day);
+        eventStack.push(event);
         return "Event added";
+    }
+
+    public String deleteEvent(Event eventToDelete) {
+        // Remove the event from the priority queue
+        boolean removedFromQueue = events.remove(eventToDelete);
+
+        // Remove the event from the monthlyHashtable
+        if (monthlyHashtable.containsKey(eventToDelete.getDateTime().getMonth())) {
+            Map<Integer, Stack<Event>> dayHashtable = monthlyHashtable.get(eventToDelete.getDateTime().getMonth());
+            if (dayHashtable.containsKey(eventToDelete.getDateTime().getDayOfMonth())) {
+                Stack<Event> eventStack = dayHashtable.get(eventToDelete.getDateTime().getDayOfMonth());
+
+                // Remove the event from the stack
+                eventStack.removeIf(e -> e.equals(eventToDelete));
+
+                // If the stack is now empty, remove the day entry from the dayHashtable
+                if (eventStack.isEmpty()) {
+                    dayHashtable.remove(eventToDelete.getDateTime().getDayOfMonth());
+                }
+
+                // If the dayHashtable is now empty, remove the month entry from the monthlyHashtable
+                if (dayHashtable.isEmpty()) {
+                    monthlyHashtable.remove(eventToDelete.getDateTime().getMonth());
+                }
+
+                if (removedFromQueue) {
+                    return "Event deleted";
+                } else {
+                    return "Event not found in the priority queue";
+                }
+            }
+        }
+
+        return "Event not found in the monthlyHashtable";
     }
 
 
@@ -54,32 +100,21 @@ public class EventManagement {
         events.add(event);    // Re-add the event so it's placed correctly in the queue
     }
 
-
-    public ArrayList<Event> searchEvent(Event newEvent) {
-        ArrayList<Event> listOfEvents = new ArrayList<>();
-        if(events!=null){
+    public Event searchEvent(String name, LocalDateTime dateTime) {
         for (Event event : events) {
-            if (newEvent.toString().equals(event.toString())) {
-                listOfEvents.add(newEvent);
-            }
-        }}
-        return listOfEvents;}
-    public ArrayList<Event> searchEvent(String name,String dateOfEvent,String description,String time,int priority) {
-        Event other = new Event(name,dateOfEvent,time,description, priority);
-        ArrayList<Event> listOfEvents = new ArrayList<>();
-        for (Event event : events) {
-            if (event.toString().compareTo(other.toString())==0){
-                listOfEvents.add(event);
+            if (event.getEventName().equals(name) && event.getDateTime().isEqual(dateTime)) {
+                return event;
             }
         }
-        return listOfEvents;}
+        return null; // Event not found
+    }
 
     public String reminder() {
-        Event nextEvent = events.poll(); // This removes the event from the queue
+        Event nextEvent = events.peek(); // This removes the event from the queue
         if (nextEvent != null) {
-            return nextEvent.toString(); // Assuming Event has a properly overridden toString method
+            return nextEvent.toString();
         }
-        return "No more events.";
+        return "No events.";
     }
 
     private boolean isConflict(Event newEvent) {
@@ -97,9 +132,9 @@ public class EventManagement {
         for (int i = 1; i <= 3; i++) {
             LocalDateTime newDateTime = originalDateTime.plusHours(i);
             if (!isDateTimeTaken(newDateTime, event)) {
-                events.remove(event); // Remove event before updating its DateTime
+                deleteEvent(event); // Remove event before updating its DateTime
                 event.setDateTime(newDateTime);
-                events.add(event);    // Re-add event to update its position in PriorityQueue
+                addEvent(event);    // Re-add event to update its position in PriorityQueue
                 return true;
             }
         }
@@ -122,10 +157,10 @@ public class EventManagement {
         boolean rescheduled = false;
         while (!rescheduled) {
             newDateTime = newDateTime.plusHours(1);
-            if (!isDateTimeTaken(newDateTime, event) || canMoveEventAtDateTime(newDateTime, event)) {
-                events.remove(event); // Remove event before updating its DateTime
+            if (!isDateTimeTaken(newDateTime, event) || canMoveEventAtDateTime(newDateTime)) {
+                deleteEvent(event); // Remove event before updating its DateTime
                 event.setDateTime(newDateTime);
-                events.add(event);    // Re-add event to update its position in PriorityQueue
+                addEvent(event);    // Re-add event to update its position in PriorityQueue
                 rescheduled = true;
             }
         }
@@ -142,5 +177,48 @@ public class EventManagement {
        return false;
     }
 
+    public void monthlyView(Month month) {
+            if (monthlyHashtable.containsKey(month)) {
+                Map<Integer, Stack<Event>> dayHashtable = monthlyHashtable.get(month);
+
+                System.out.println("All events for " + month + ":");
+
+                // Iterate through days in the month
+                for (Map.Entry<Integer, Stack<Event>> entry : dayHashtable.entrySet()) {
+                    int day = entry.getKey();
+                    Stack<Event> eventStack = entry.getValue();
+                    System.out.println("Day " + day + ":");
+
+                    // Print all events for the day
+                    while (!eventStack.isEmpty()) {
+                        System.out.println(eventStack.pop());
+                    }
+                }
+            } else {
+                System.out.println("No events for " + month);
+            }
+    }
+    public void dailyView(Month month,int day){
+            if (monthlyHashtable.containsKey(month)) {
+                Map<Integer, Stack<Event>> dayHashtable = monthlyHashtable.get(month);
+                if(dayHashtable.containsKey(day)){
+                // Iterate through events in the day
+                Stack<Event> eventStack= dayHashtable.get(day);
+                System.out.println("Events of the Day " + day + ":");
+                // Print all events for the day
+                while (!eventStack.isEmpty()) {
+                    System.out.println(eventStack.pop());
+                }
+
+            } else {
+                System.out.println("No events for " + day);
+            }
+        }
+
+    }
+
+
 
 }
+
+
